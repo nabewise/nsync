@@ -4,7 +4,9 @@ require 'rubygems'
 require 'test/unit'
 require 'mocha'
 require 'shoulda'
+require 'redgreen'
 
-class NsyncTestFoo; end
-class NsyncTestBar; end
+require File.join(File.dirname(__FILE__), "repo")
+require File.join(File.dirname(__FILE__), "classes")
+
 

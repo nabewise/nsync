@@ -3,6 +3,10 @@ module Nsync
     @config ||= Config.new
   end
 
+  def self.reset_config
+    @config = nil
+  end
+
   class Config
     #required to be user specified
     attr_accessor :version_manager, :repo_path
@@ -10,26 +14,57 @@ module Nsync
     #optional
     attr_accessor :ordering, :repo_url, :log, :lock_file
 
+    include Lockfile
+
     def initialize
-      @class_mappings = {}
-      self.log = ::Logger.new(STDOUT)
+      clear_class_mappings
+      self.log = ::Logger.new(STDERR)
       self.lock_file = "/var/run/nsync.lock"
     end
 
     def lock
       ret = nil
-      success = Lockfile.with_lock_file(lock_file) do
+      success = with_lock_file(lock_file) do
         ret = yield
       end
-      unless success
+      if success
+        return ret
+      else
         log.error("[NSYNC] Could not obtain lock!; exiting")
+        return false
       end
-      ret
     end
+
+    def cd
+      old_pwd = FileUtils.pwd
+      begin
+        FileUtils.cd repo_path
+        yield
+      ensure
+        FileUtils.cd old_pwd
+      end
+    end
+
 
     def map_class(producer_class, *consumer_classes)
       @class_mappings[producer_class] ||= []
       @class_mappings[producer_class] += consumer_classes
+    end
+
+    def clear_class_mappings
+      @class_mappings = {}
+    end
+
+    def consumer_classes_for(producer_class)
+      Array(@class_mappings[producer_class]).map do |klass|
+        begin
+          klass.constantize
+        rescue NameError => e
+          log.error(e.inspect)
+          log.warn("[NSYNC] Could not find class '#{klass}'; skipping")
+          nil
+        end
+      end.compact
     end
 
     def version_manager
@@ -38,7 +73,7 @@ module Nsync
     end
 
     def self.run
-      yield Nsync.configuration
+      yield Nsync.config
     end
 
     def local?

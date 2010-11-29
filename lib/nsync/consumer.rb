@@ -2,8 +2,12 @@ module Nsync
   class Consumer
     attr_accessor :repo
 
+    class CouldNotInitializeRepoError < RuntimeError; end
+    
     def initialize
-      get_or_create_repo
+      unless get_or_create_repo
+        raise CouldNotInitializeRepoError
+      end
     end
 
     def update
@@ -15,6 +19,7 @@ module Nsync
     def rollback
       apply_changes(Nsync.config.version_manager.version,
                     Nsync.config.version_manager.previous_version)
+    end
 
     def config
       Nsync.config
@@ -22,9 +27,12 @@ module Nsync
 
     def apply_changes(a, b)
       config.lock do
+        diffs = nil
         diffs = repo.diff(a, b)
-  
+
         changeset = changeset_from_diffs(diffs)
+
+        #p changeset
   
         if config.ordering
           config.ordering.each do |klass|
@@ -32,7 +40,7 @@ module Nsync
             apply_changes_for_class(klass, changes)
           end
         else
-          changeset.each |klass, changes| do
+          changeset.each do |klass, changes|
             apply_changes_for_class(klass, changes)
           end
         end
@@ -52,7 +60,9 @@ module Nsync
       end
 
       def data
-        diff.b_blob.data
+        @data ||= JSON.load(diff.b_blob.data)
+      rescue
+        nil
       end
     end
 
@@ -64,15 +74,19 @@ module Nsync
 
       config.lock do
         git = Grit::Git.new(config.repo_path)
-        git.clone({:bare => true}, git.repo_url)
+        git.clone({:bare => true}, config.repo_url, config.repo_path)
         return self.repo = Grit::Repo.new(config.repo_path)
       end
     end
 
     def update_repo
+      return true if config.local?
       config.lock do
+        repo.remote_fetch('origin')
         git = Grit::Git.new(config.repo_path)
-        git.pull({}, 'origin', 'master')
+        # from http://www.pragmatic-source.com/en/opensource/tips/automatic-synchronization-2-git-repositories
+        git.reset({:soft => true}, 'FETCH_HEAD')
+        true
       end
     end
 
@@ -106,6 +120,8 @@ module Nsync
 
     def changeset_from_diffs(diffs)
       diffs.inject({}) do |h, diff|
+        next h if diff_path(diff) =~ /\.gitignore$/
+
         classes, id = consumer_classes_and_id_from_path(diff_path(diff))
         classes.each do |klass|
           h[klass] ||= []
@@ -118,7 +134,7 @@ module Nsync
     def consumer_classes_and_id_from_path(path)
       producer_class_name = File.dirname(path).camelize
       id = File.basename(path, ".json")
-      [config.consumer_classes_for(class_name), id]
+      [config.consumer_classes_for(producer_class_name), id]
     end
 
     def diff_path(diff)
