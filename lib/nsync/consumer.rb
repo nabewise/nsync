@@ -76,6 +76,7 @@ module Nsync
           objects = klass.nsync_find(change.id)
           if objects.empty? && change.type == :added
             if klass.respond_to?(:nsync_add_data)
+              config.log.info("[NSYNC] Adding data #{diff_path(change.diff)} to #{klass}")
               klass.nsync_add_data(self, diff_path(change.diff), change.data)
             else
               config.log.warn("[NSYNC] Class '#{klass}' has no method nsync_add_data; skipping")
@@ -85,8 +86,9 @@ module Nsync
               if obj.respond_to?(:nsync_update)
                 obj.nsync_update(self, change.type, diff_path(change.diff),
                                 change.data)
+                config.log.info("[NSYNC] Updating from #{diff_path(change.diff)} to #{obj.inspect}")
               else
-                config.log.warn("[NSYNC] Object #{object.inspect} has no method nsync_update; skipping")
+                config.log.info("[NSYNC] Object #{obj.inspect} has no method nsync_update; skipping")
               end
             end
           end
