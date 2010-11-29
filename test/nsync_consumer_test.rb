@@ -181,6 +181,13 @@ class NsyncConsumerTest < Test::Unit::TestCase
           mock_foo2.expects(:nsync_update).with(@consumer, :deleted, is_a(String), nil).once
           NsyncTestFoo.expects(:nsync_find).with('1').returns([mock_foo2]).once
           @consumer.update
+
+          Nsync.config.version_manager = stub(:version => 'HEAD', :previous_version => 'HEAD^1')
+          NsyncTestFoo.expects(:nsync_find).with('1').returns([]).once
+          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, is_a(String), has_entry("val", "Party Hardest")) 
+
+          #bring the party back
+          @consumer.rollback
         end
       end
     end

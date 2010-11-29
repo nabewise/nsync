@@ -27,6 +27,7 @@ module Nsync
 
     def apply_changes(a, b)
       config.lock do
+        Nsync.config.log.info("[NSYNC] Moving Nsync::Consumer from '#{a}' to '#{b}'")
         diffs = nil
         diffs = repo.diff(a, b)
 
