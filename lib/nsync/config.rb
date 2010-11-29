@@ -8,11 +8,23 @@ module Nsync
     attr_accessor :version_manager, :repo_path
 
     #optional
-    attr_accessor :ordering, :repo_url, :log
+    attr_accessor :ordering, :repo_url, :log, :lock_file
 
     def initialize
       @class_mappings = {}
       self.log = ::Logger.new(STDOUT)
+      self.lock_file = "/var/run/nsync.lock"
+    end
+
+    def lock
+      ret = nil
+      success = Lockfile.with_lock_file(lock_file) do
+        ret = yield
+      end
+      unless success
+        log.error("[NSYNC] Could not obtain lock!; exiting")
+      end
+      ret
     end
 
     def map_class(producer_class, *consumer_classes)

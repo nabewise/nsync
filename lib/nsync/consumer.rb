@@ -7,7 +7,7 @@ module Nsync
     end
 
     def update
-      update_repo
+      update_repo &&
       apply_changes(Nsync.config.version_manager.version,
                     'HEAD')
     end
@@ -21,18 +21,20 @@ module Nsync
     end
 
     def apply_changes(a, b)
-      diffs = repo.diff(a, b)
-
-      changeset = changeset_from_diffs(diffs)
-
-      if config.ordering
-        config.ordering.each do |klass|
-          changes = changeset[klass]
-          apply_changes_for_class(klass, changes)
-        end
-      else
-        changeset.each |klass, changes| do
-          apply_changes_for_class(klass, changes)
+      config.lock do
+        diffs = repo.diff(a, b)
+  
+        changeset = changeset_from_diffs(diffs)
+  
+        if config.ordering
+          config.ordering.each do |klass|
+            changes = changeset[klass]
+            apply_changes_for_class(klass, changes)
+          end
+        else
+          changeset.each |klass, changes| do
+            apply_changes_for_class(klass, changes)
+          end
         end
       end
     end
@@ -57,17 +59,21 @@ module Nsync
     protected
     def get_or_create_repo
       if config.local? || File.exists?(config.repo_path)
-        return Grit::Repo.new(config.repo_path)
+        return self.repo = Grit::Repo.new(config.repo_path)
       end
 
-      git = Grit::Git.new(config.repo_path)
-      git.clone({:bare => true}, git.repo_url)
-      return Grit::Repo.new(config.repo_path)
+      config.lock do
+        git = Grit::Git.new(config.repo_path)
+        git.clone({:bare => true}, git.repo_url)
+        return self.repo = Grit::Repo.new(config.repo_path)
+      end
     end
 
     def update_repo
-      git = Grit::Git.new(config.repo_path)
-      git.pull({}, 'origin', 'master')
+      config.lock do
+        git = Grit::Git.new(config.repo_path)
+        git.pull({}, 'origin', 'master')
+      end
     end
 
     def apply_changes_for_class(klass, changes)
