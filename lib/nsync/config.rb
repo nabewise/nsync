@@ -12,7 +12,7 @@ module Nsync
     attr_accessor :version_manager, :repo_path
 
     #optional
-    attr_accessor :ordering, :repo_url, :log, :lock_file
+    attr_accessor :ordering, :repo_url, :repo_push_url, :log, :lock_file
 
     include Lockfile
 
@@ -27,7 +27,7 @@ module Nsync
       success = with_lock_file(lock_file) do
         ret = yield
       end
-      if success
+      if success != false
         return ret
       else
         log.error("[NSYNC] Could not obtain lock!; exiting")
@@ -82,6 +82,10 @@ module Nsync
 
     def remote?
       !!repo_url
+    end
+
+    def remote_push?
+      !!repo_push_url
     end
   end
 end

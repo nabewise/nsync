@@ -19,10 +19,18 @@ class TestRepo
   end
 
   def repo_path
-    @repo_path ||= "/private/tmp/nsync_test_repo_#{Process.pid}"
+    self.class.repo_path
+  end
+
+  def self.repo_path
+    "/private/tmp/nsync_test_repo_#{Process.pid}"
   end
 
   def bare_consumer_repo_path
+    self.class.bare_consumer_repo_path
+  end
+
+  def self.bare_consumer_repo_path
     "#{repo_path}_consumer.git"
   end
 
@@ -33,7 +41,7 @@ class TestRepo
         FileUtils.mkdir_p(File.join(repo_path, dir))
       end
       File.open(File.join(repo_path, filename), "w") do |f|
-        f.write ((content.is_a?(Hash))? content.to_json : content)
+        f.write((content.is_a?(Hash))? content.to_json : content)
       end
       repo.add(File.join(repo_path, filename))
     end

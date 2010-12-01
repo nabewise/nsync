@@ -4,19 +4,20 @@ module Nsync
       config.cd do
         dir = File.dirname(filename)
         unless [".", "/"].include?(dir) || File.directory?(dir)
-          FileUtils.mkdir_p(File.join(repo_path, dir))
+          FileUtils.mkdir_p(File.join(config.repo_path, dir))
         end
 
-        File.open(File.join(repo_name, filename), "w") do |f|
-          f.write( (hash.is_a?(Hash))? content.to_json : content )
+        File.open(File.join(config.repo_path, filename), "w") do |f|
+          f.write( (hash.is_a?(Hash))? hash.to_json : hash )
         end
-        repo.add(File.join(repo_name, filename))
+        repo.add(File.join(config.repo_path, filename))
         config.log.info("[NSYNC] Updated file '#{filename}'")
       end
+      true
     end
 
     def remove_file(filename)
-      FileUtils.rm File.join(repo_path, filename)
+      FileUtils.rm File.join(config.repo_path, filename)
       config.log.info("[NSYNC] Removed file '#{filename}'")
     end
 
@@ -37,6 +38,7 @@ module Nsync
           config.log.info("[NSYNC] Pushed changes")
         end
       end
+      true
     end
 
     def rollback
