@@ -84,9 +84,8 @@ module Nsync
       return true if config.local?
       config.lock do
         repo.remote_fetch('origin')
-        git = Grit::Git.new(config.repo_path)
         # from http://www.pragmatic-source.com/en/opensource/tips/automatic-synchronization-2-git-repositories
-        git.reset({:soft => true}, 'FETCH_HEAD')
+        repo.git.reset({:soft => true}, 'FETCH_HEAD')
         true
       end
     end

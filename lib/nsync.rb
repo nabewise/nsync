@@ -20,3 +20,4 @@ end
 
 require 'nsync/config'
 require 'nsync/consumer'
+require 'nsync/producer'
