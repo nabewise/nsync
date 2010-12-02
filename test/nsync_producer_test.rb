@@ -126,4 +126,136 @@ class NsyncProducerTest < Test::Unit::TestCase
       @producer.commit(@msg)
     end
   end
+
+  context "Pushing changes" do
+    setup do
+      @repo = TestRepo.new
+
+      Nsync.config.repo_path = @repo.repo_path
+      @producer = Nsync::Producer.new
+    end
+
+    context "when there is a remote push url" do
+      setup do
+        @push_url = "/tmp/foo/bar"
+        Nsync.config.repo_push_url = @push_url
+      end
+
+      should "push changes to that" do
+        @producer.repo.git.expects(:push).with({}, @push_url, "+master").once
+        @producer.push
+      end
+    end
+
+    context "when there is no remote push url" do
+      should "not try to push" do
+        @producer.repo.git.expects(:push).never
+        @producer.push
+      end
+    end
+  end
+
+  context "Because a producer is a consumer that consumes itself" do
+    setup do
+      @repo = TestRepo.new
+
+      Nsync.config.repo_path = @repo.repo_path
+      @producer = Nsync::Producer.new
+    end
+
+    context "the class mapping" do
+      setup do
+        Nsync.config.map_class "NsyncTestBar", "NsyncTestFoo"
+      end
+      
+      context "when unset for a class" do
+        should "return the producer class" do
+          assert_equal [NsyncTestFoo], 
+            @producer.send(:consumer_classes_and_id_from_path, "nsync_test_foo/1.json")[0]
+        end
+      end
+
+      context "when set for a class" do
+        should "return a consumer class normally" do
+          assert_equal [NsyncTestFoo], 
+            @producer.send(:consumer_classes_and_id_from_path, "nsync_test_bar/1.json")[0]
+        end
+      end
+    end
+
+    context "rollback behaves quite differently" do
+      setup do
+        Nsync.config.version_manager = stub(:version => "bad_rev", 
+                                            :previous_version => "good_rev")
+      end
+
+      should "reset from bad to good, apply changes between bad and good, and push" do
+        @producer.repo.git.expects(:reset).never
+        @producer.repo.git.expects(:reset).with({:hard => true}, "good_rev").once
+        @producer.expects(:apply_changes).with("bad_rev", "good_rev").once
+        @producer.expects(:push).once
+        @producer.rollback
+      end
+    end
+  end
+
+  context "basic flow" do
+    setup do
+      @repo_path = TestRepo.repo_path
+      @repo_push_url = TestRepo.bare_consumer_repo_path
+      FileUtils.rm_rf @repo_path
+      FileUtils.rm_rf @repo_push_url
+
+      @remote_repo = Grit::Repo.init_bare(@repo_push_url)
+      Nsync.config.repo_path = @repo_path
+      Nsync.config.repo_push_url = @repo_push_url
+      Nsync.config.version_manager = Nsync::GitVersionManager.new
+
+      @producer = Nsync::Producer.new
+      @repo = @producer.repo
+    end
+
+    should "work" do
+      @producer.write_file("nsync_test_foo/1.json", {:id => 1, :val => "Party"})
+      @producer.write_file("nsync_test_bar/2.json", {:id => 2, :val => "Study"})
+      assert_equal 1, @repo.commits.size
+      assert_equal 1, @remote_repo.commits.size
+      assert File.exists?(File.join(@repo_path, "nsync_test_foo/1.json"))
+      assert File.exists?(File.join(@repo_path, "nsync_test_bar/2.json"))
+      @producer.commit("Added some files")
+
+      assert_equal 2, @repo.commits.size
+      assert_equal 2, @remote_repo.commits.size
+
+      @producer.write_file("nsync_test_foo/2.json", {:id => 2, :val => "Rock"})
+      assert File.exists?(File.join(@repo_path, "nsync_test_foo/2.json"))
+      @producer.commit("And another")
+
+      assert_equal 3, @repo.commits.size
+      assert_equal 3, @remote_repo.commits.size
+
+      @producer.remove_file("nsync_test_bar/2.json")
+      assert !File.exists?(File.join(@repo_path, "nsync_test_bar/2.json"))
+      @producer.commit("Remove the no-fun brigade")
+
+      assert_equal 4, @repo.commits.size
+      assert_equal 4, @remote_repo.commits.size
+
+      NsyncTestBar.expects(:nsync_find).with('2').returns([]).once
+      NsyncTestBar.expects(:nsync_add_data).once
+
+      @producer.rollback
+
+      assert File.exists?(File.join(@repo_path, "nsync_test_bar/2.json"))
+      assert_equal 3, @repo.commits.size
+      assert_equal 3, @remote_repo.commits.size
+
+      @producer.write_file("nsync_test_bar/5.json", {:id => 5, :val => "No Fun"})
+      assert File.exists?(File.join(@repo_path, "nsync_test_bar/5.json"))
+      @producer.commit("Life goes on")
+
+      assert_equal 4, @repo.commits.size
+      assert_equal 4, @remote_repo.commits.size
+    end
+  end
 end

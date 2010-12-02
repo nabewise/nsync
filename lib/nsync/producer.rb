@@ -34,7 +34,7 @@ module Nsync
     def push
       if config.remote_push?
         config.cd do
-          repo.git.push({}, config.repo_push_url, "master")
+          repo.git.push({}, config.repo_push_url, "+master")
           config.log.info("[NSYNC] Pushed changes")
         end
       end
@@ -42,11 +42,12 @@ module Nsync
     end
 
     def rollback
-      config.lock do
-        commit_to_revert = Nsync.config.version_manager.version
-        repo.git.revert({}, commit_to_revert)
+      commit_to_rollback = Nsync.config.version_manager.version
+      commit_to_rollback_to = Nsync.config.version_manager.previous_version
+      config.cd do
+        repo.git.reset({:hard => true}, commit_to_rollback_to)
+        apply_changes(commit_to_rollback, commit_to_rollback_to)
       end
-      apply_changes(commit_to_revert, Nsync.config.version_manager.version)
       push
     end
 

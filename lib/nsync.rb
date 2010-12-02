@@ -20,4 +20,5 @@ end
 
 require 'nsync/config'
 require 'nsync/consumer'
+require 'nsync/git_version_manager'
 require 'nsync/producer'
