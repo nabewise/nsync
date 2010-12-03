@@ -1,8 +1,13 @@
 require 'rubygems'
 require 'rake'
 
+gem "schleyfox-grit", ">= 2.3.0.1"
+require 'grit'
 
 require 'jeweler'
+require 'jeweler_monkey_patch'
+      
+    
 Jeweler::Tasks.new do |gem|
   gem.name = "nsync"
   gem.summary = %Q{Keep your data processors and apps in sync}
