@@ -1,40 +1,103 @@
 module Nsync
+  # The Nsync::Consumer is used to handle the consumption of data from an Nsync
+  # repo for the entire app. It reads in the differences between the current
+  # version of data in the database and the new data from the producer, finding
+  # and notifying all affected classes and objects.
+  #
+  # Basic Usage:
+  #     
+  #     Nsync::Config.run do |c|
+  #       # The consumer uses a read-only, bare repository (one ending in .git)
+  #       # This will automatically be created if it does not exist
+  #       c.repo_path = "/local/path/to/hold/data.git"
+  #       # The remote repository url from which to pull data
+  #       c.repo_url = "git@examplegithost:username/data.git"
+  #
+  #       # An object that implements the VersionManager interface 
+  #       # (see Nsync::GitVersionManager) for an example
+  #       c.version_manager = MyCustomVersionManager.new
+  #
+  #       # A lock file path to use for this app
+  #       c.lock_file = "/tmp/app_name_nsync.lock"
+  #
+  #       # The class mapping maps from the class names of the producer classes to
+  #       # the class names of their associated consuming classes. A producer can
+  #       # map to one or many consumers, and a consumer can be mapped to one or many
+  #       # producers. Consumer classes should implement the Consumer interface.
+  #       c.map_class "RawDataPostClass", "Post"
+  #       c.map_class "RawDataInfo", "Info"
+  #     end
+  #
+  #     # Create a new consumer object, this will clone the repo if needed
+  #     consumer = Nsync::Consumer.new
+  #
+  #     # update this app to the latest data, pulling if necessary
+  #     consumer.update
+  #
+  #     # rollback the last change
+  #     consumer.rollback
   class Consumer
     attr_accessor :repo
 
+    # There was an issue creating or accessing the repository
     class CouldNotInitializeRepoError < RuntimeError; end
-    
+   
+    # Sets the repository to the repo at config.repo_path
+    #
+    # If config.repo_url is set and the directory at config.repo_path does not
+    # exist yet, a new bare repository will be cloned from config.repo_url
     def initialize
       unless get_or_create_repo
         raise CouldNotInitializeRepoError
       end
     end
 
+    # Updates the data to the latest version
+    #
+    # If the repo has a remote origin, the latest changes will be fetched.
+    #
+    # NOTE: It is critical that the version_manager returns correct results
+    # as this method goes from what it says is the latest commit that was loaded in
+    # to HEAD.
     def update
       update_repo &&
-      apply_changes(Nsync.config.version_manager.version,
-                    'HEAD')
+      apply_changes(config.version_manager.version,
+                    repo.head.commit.id)
     end
 
+    # Rolls back data to the previous loaded version
+    #
+    # NOTE: If you rollback and then update, the 'bad' commit will then be reloaded.
+    # This is primarily meant as a way to get back to a known good state quickly, while
+    # the issues are fixed in the producer.
     def rollback
-      apply_changes(Nsync.config.version_manager.version,
-                    Nsync.config.version_manager.previous_version)
+      apply_changes(config.version_manager.version,
+                    config.version_manager.previous_version)
     end
 
-    def config
+    # @return [Nsync::Config]
+    def config 
       Nsync.config
     end
 
+    # Translates and applies the changes between commit id 'a' and commit id 'b' to
+    # the datastore.  This is used internally by rollback and update. Don't use this
+    # unless you absolutely know what you are doing.
+    #
+    # If you must call this directly, understand that 'a' should almost always be the
+    # commit id of the current data that is loaded into the database. 'b' can be any
+    # commit in the graph, forward or backwards.
+    #
+    # @param [String] a current data version commit id
+    # @param [String] b new data version commit id
     def apply_changes(a, b)
       config.lock do
-        Nsync.config.log.info("[NSYNC] Moving Nsync::Consumer from '#{a}' to '#{b}'")
+        config.log.info("[NSYNC] Moving Nsync::Consumer from '#{a}' to '#{b}'")
         diffs = nil
         diffs = repo.diff(a, b)
 
         changeset = changeset_from_diffs(diffs)
 
-        #p changeset
-  
         if config.ordering
           config.ordering.each do |klass|
             changes = changeset[klass]
@@ -45,11 +108,12 @@ module Nsync
             apply_changes_for_class(klass, changes)
           end
         end
+        config.version_manager.version = b
       end
     end
 
 
-    class Change < Struct.new(:id, :diff)
+    class Change < Struct.new(:id, :diff) #:nodoc:
       def type
         if diff.deleted_file
           :deleted
@@ -63,7 +127,7 @@ module Nsync
       def data
         @data ||= JSON.load(diff.b_blob.data)
       rescue
-        nil
+        {}
       end
     end
 
@@ -76,7 +140,9 @@ module Nsync
       config.lock do
         git = Grit::Git.new(config.repo_path)
         git.clone({:bare => true}, config.repo_url, config.repo_path)
-        return self.repo = Grit::Repo.new(config.repo_path)
+        self.repo = Grit::Repo.new(config.repo_path)
+        config.version_manager.version = git.rev_list({:reverse => true}, "master").split("\n").first
+        return self.repo
       end
     end
 

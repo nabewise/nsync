@@ -34,6 +34,10 @@ class TestRepo
     "#{repo_path}_consumer.git"
   end
 
+  def self.repo_push_path
+    "#{repo_path}_producer_push.git"
+  end
+
   def add_file(filename, content)
     cd do
       dir = File.dirname(filename)

@@ -1,5 +1,10 @@
 module Nsync
   class Producer < Consumer
+
+    def file_exists?(filename)
+      File.exists?(File.join(config.repo_path, filename))
+    end
+
     def write_file(filename, hash)
       config.cd do
         dir = File.dirname(filename)
@@ -42,8 +47,8 @@ module Nsync
     end
 
     def rollback
-      commit_to_rollback = Nsync.config.version_manager.version
-      commit_to_rollback_to = Nsync.config.version_manager.previous_version
+      commit_to_rollback = config.version_manager.version
+      commit_to_rollback_to = config.version_manager.previous_version
       config.cd do
         repo.git.reset({:hard => true}, commit_to_rollback_to)
         apply_changes(commit_to_rollback, commit_to_rollback_to)

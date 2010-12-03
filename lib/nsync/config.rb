@@ -12,14 +12,14 @@ module Nsync
     attr_accessor :version_manager, :repo_path
 
     #optional
-    attr_accessor :ordering, :repo_url, :repo_push_url, :log, :lock_file
+    attr_accessor :ordering, :repo_url, :repo_push_url, :log, :lock_file, :producer_instance
 
     include Lockfile
 
     def initialize
       clear_class_mappings
       self.log = ::Logger.new(STDERR)
-      self.lock_file = "/var/run/nsync.lock"
+      self.lock_file = "/tmp/nsync.lock"
     end
 
     def lock

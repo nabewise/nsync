@@ -1,3 +1,7 @@
 *.swp
 *.swo
 pkg
+coverage
+.DS_Store
+.yardoc
+doc

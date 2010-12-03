@@ -8,6 +8,9 @@ class NsyncConsumerTest < Test::Unit::TestCase
     FileUtils.rm @lock_file, :force => true
     Nsync.config.lock_file = @lock_file
 
+    Nsync.config.version_manager = stub(:version => "foo", :previous_version => "bar")
+    Nsync.config.version_manager.stubs(:version=).with(is_a(String))
+
     # I think mocha is doing something evil and redefing clone
     if Grit::Git.instance_methods.include?("clone")
       Grit::Git.send(:undef_method, :clone)
@@ -106,7 +109,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
   context "Updating the Consumer side" do
     setup do
       @repo = TestRepo.new
-      Nsync.config.version_manager = stub(:version => "HEAD^1")
+      Nsync.config.version_manager.stubs(:version => "HEAD^1")
       FileUtils.rm_rf @repo.bare_consumer_repo_path
     end
 
@@ -148,6 +151,8 @@ class NsyncConsumerTest < Test::Unit::TestCase
           Nsync.config.clear_class_mappings
           Nsync.config.map_class "Foo", "NsyncTestFoo"
           Nsync.config.map_class "Bar", "NsyncTestBar"
+          Nsync.config.version_manager = NsyncTestVersion
+          NsyncTestVersion.version = @repo.repo.head.commit.id
         end
 
         should "work" do
@@ -178,11 +183,10 @@ class NsyncConsumerTest < Test::Unit::TestCase
           @repo.remove_file("foo/1.json")
           @repo.commit("No more party")
           mock_foo2 = mock
-          mock_foo2.expects(:nsync_update).with(@consumer, :deleted, is_a(String), nil).once
+          mock_foo2.expects(:nsync_update).with(@consumer, :deleted, is_a(String), {}).once
           NsyncTestFoo.expects(:nsync_find).with('1').returns([mock_foo2]).once
           @consumer.update
 
-          Nsync.config.version_manager = stub(:version => 'HEAD', :previous_version => 'HEAD^1')
           NsyncTestFoo.expects(:nsync_find).with('1').returns([]).once
           NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, is_a(String), has_entry("val", "Party Hardest")) 
 
