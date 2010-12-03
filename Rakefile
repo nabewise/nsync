@@ -12,7 +12,7 @@ desc "Generate RCov test coverage and open in your browser"
 task :coverage do
   require 'rcov'
   sh "rm -fr coverage"
-  sh "rcov test/**/*_test.rb"
+  sh "rcov -Itest -Ilib -x \"rubygems/*,/Library/Ruby/Site/*,gems/*,rcov*\" --html test/*_test.rb"
   sh "open coverage/index.html"
 end
 
