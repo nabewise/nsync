@@ -8,6 +8,9 @@ require 'active_support'
 gem "schleyfox-grit", ">= 2.3.0.1"
 require 'grit'
 
+#up the timeout, as these repos can get quite large
+Grit::Git.git_timeout = 60 # 1 minute should do
+
 gem "schleyfox-lockfile", ">= 1.0.0"
 require 'lockfile'
 

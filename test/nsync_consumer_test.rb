@@ -159,7 +159,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
           @repo.add_file("foo/1.json", {:id => 1, :val => "Party"})
           @repo.commit("Added one object")
           NsyncTestFoo.expects(:nsync_find).with('1').returns([]).once
-          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, is_a(String), has_entry("val", "Party")) 
+          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, :added, is_a(String), has_entry("val", "Party")) 
           @consumer.update
 
           @repo.add_file("bar/2.json", {:id => 2, :val => "Hardy"})
@@ -177,7 +177,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
           mock_foo.expects(:nsync_update).once.with(@consumer, :modified, is_a(String), has_entry("val", "Party Hardest"))
           NsyncTestFoo.expects(:nsync_find).with('1').returns([mock_foo]).once
           NsyncTestBar.expects(:nsync_find).with('3').returns([]).once
-          NsyncTestBar.expects(:nsync_add_data).with(@consumer, is_a(String), has_entry("val", "Moooooo")).once
+          NsyncTestBar.expects(:nsync_add_data).with(@consumer, :added, is_a(String), has_entry("val", "Moooooo")).once
           @consumer.update
 
           @repo.remove_file("foo/1.json")
@@ -188,7 +188,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
           @consumer.update
 
           NsyncTestFoo.expects(:nsync_find).with('1').returns([]).once
-          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, is_a(String), has_entry("val", "Party Hardest")) 
+          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, :added, is_a(String), has_entry("val", "Party Hardest")) 
 
           #bring the party back
           @consumer.rollback

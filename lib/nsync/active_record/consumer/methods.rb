@@ -7,7 +7,7 @@ module Nsync
           all(:conditions => {nsync_opts[:id_key] => ids})
         end
 
-        def nsync_add_data(consumer, filename, data)
+        def nsync_add_data(consumer, event_type, filename, data)
           data = data.dup
           nsync_opts = read_inheritable_attribute(:nsync_opts)
           if nsync_opts[:id_key].to_s != "id"

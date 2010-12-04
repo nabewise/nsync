@@ -100,8 +100,13 @@ module Nsync
 
         if config.ordering
           config.ordering.each do |klass|
-            changes = changeset[klass]
-            apply_changes_for_class(klass, changes)
+            begin
+              klass = klass.constantize
+              changes = changeset[klass]
+              apply_changes_for_class(klass, changes)
+            rescue NameError
+              log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
+            end
           end
         else
           changeset.each do |klass, changes|
@@ -160,10 +165,10 @@ module Nsync
       if klass.respond_to?(:nsync_find)
         changes.each do |change|
           objects = klass.nsync_find(change.id)
-          if objects.empty? && change.type == :added
+          if objects.empty? && change.type != :deleted
             if klass.respond_to?(:nsync_add_data)
               config.log.info("[NSYNC] Adding data #{diff_path(change.diff)} to #{klass}")
-              klass.nsync_add_data(self, diff_path(change.diff), change.data)
+              klass.nsync_add_data(self, change.type, diff_path(change.diff), change.data)
             else
               config.log.warn("[NSYNC] Class '#{klass}' has no method nsync_add_data; skipping")
             end
