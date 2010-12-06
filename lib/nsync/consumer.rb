@@ -123,7 +123,8 @@ module Nsync
     end
 
 
-    class Change < Struct.new(:id, :diff) #:nodoc:
+    # @private
+    class Change < Struct.new(:id, :diff) 
       def type
         if diff.deleted_file
           :deleted
@@ -141,15 +142,47 @@ module Nsync
       end
     end
 
+    # Adds a callback to the list of callbacks to occur after main processing
+    # of the class specified by 'klass'. Can be used to handle data relations
+    # between objects of the same class.
+    #
+    # Example:
+    #     
+    #     class Post
+    #       def nsync_update(consumer, event_type, filename, data)
+    #         #... normal data update stuff ...
+    #         post = self
+    #         related_post_source_ids = data['related_post_ids']
+    #         consumer.after_class_finished(Post, lambda {
+    #           posts = Post.all(:conditions => 
+    #             {:source_id => related_post_source_ids })
+    #           post.related_posts = posts
+    #         })
+    #       end
+    #     end
+    #
+    # @param [Class] klass
+    # @param [Proc] l
     def after_class_finished(klass, l)
       @after_class_finished_queues[klass] ||= []
       @after_class_finished_queues[klass] << l
     end
 
+    # Adds a callback to the list of callbacks to occur after main processing
+    # of the class that is currently being processed. This is essentially an
+    # alias for after_class_finished for the current class
+    #
+    # @param [Proc] l
     def after_current_class_finished(l)
       after_class_finished(@current_class_for_queue, l)
     end
 
+
+    # Adds a callback to the list of callbacks to occur after all changes have
+    # been applied.  This queue executes immediately prior to the current
+    # version being updated
+    #
+    # @param [Proc] l
     def after_finished(l)
       @after_finished_queue ||= []
       @after_finished_queue << l

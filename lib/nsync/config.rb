@@ -12,7 +12,8 @@ module Nsync
     attr_accessor :version_manager, :repo_path
 
     #optional
-    attr_accessor :ordering, :repo_url, :repo_push_url, :log, :lock_file, :producer_instance
+    attr_accessor :ordering, :repo_url, :repo_push_url, :log, :lock_file, 
+      :producer_instance
 
     include Lockfile
 
@@ -70,6 +71,10 @@ module Nsync
     def version_manager
       return @version_manager if @version_manager
       raise "Must define config.version_manager"
+    end
+
+    def producer_instance
+      @producer_instance ||= Nsync::Producer.new
     end
 
     def self.run
