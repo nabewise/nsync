@@ -45,3 +45,17 @@ end
 
 require 'yard'
 YARD::Rake::YardocTask.new
+
+require 'metric_fu'
+MetricFu::Configuration.run do |config|
+  config.metrics -= [:rcov, :saikuro]
+  config.graphs -= [:rcov, :saikuro]
+end
+
+class MetricFu::Template
+  def file_url(name, line)
+    @commit ||= `git rev-parse --verify HEAD`.chomp
+    "http://github.com/schleyfox/nsync/blob/#{@commit}/#{name}#{(line)? "#L#{line}" : ""}"
+  end
+end
+
