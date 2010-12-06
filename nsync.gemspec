@@ -9,16 +9,18 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Ben Hughes"]
-  s.date = %q{2010-12-04}
+  s.date = %q{2010-12-06}
   s.description = %q{Nsync is designed to allow you to have a separate data
   processing app with its own data processing optimized database and a consumer
   app with its own database, while keeping the data as in sync as you want it.}
   s.email = %q{ben@pixelmachine.org}
   s.extra_rdoc_files = [
-    "README"
+    "LICENSE",
+     "README.md"
   ]
   s.files = [
-    "README",
+    "LICENSE",
+     "README.md",
      "Rakefile",
      "VERSION",
      "jeweler_monkey_patch.rb",
