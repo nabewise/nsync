@@ -103,9 +103,11 @@ module Nsync
             begin
               klass = klass.constantize
               changes = changeset[klass]
-              apply_changes_for_class(klass, changes)
+              if changes
+                apply_changes_for_class(klass, changes)
+              end
             rescue NameError
-              log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
+              config.log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
             end
           end
         else

@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{nsync}
-  s.version = "0.0.1"
+  s.version = "0.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Ben Hughes"]
-  s.date = %q{2010-12-03}
+  s.date = %q{2010-12-04}
   s.description = %q{Nsync is designed to allow you to have a separate data
   processing app with its own data processing optimized database and a consumer
   app with its own database, while keeping the data as in sync as you want it.}
@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
     "README",
      "Rakefile",
      "VERSION",
+     "jeweler_monkey_patch.rb",
      "lib/nsync.rb",
      "lib/nsync/active_record/consumer/methods.rb",
      "lib/nsync/active_record/methods.rb",
@@ -30,7 +31,8 @@ Gem::Specification.new do |s|
      "lib/nsync/consumer.rb",
      "lib/nsync/git_version_manager.rb",
      "lib/nsync/producer.rb",
-     "lib/nsync/producer/methods.rb"
+     "lib/nsync/producer/methods.rb",
+     "nsync.gemspec"
   ]
   s.homepage = %q{http://github.com/schleyfox/nsync}
   s.require_paths = ["lib"]

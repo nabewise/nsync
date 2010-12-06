@@ -10,6 +10,7 @@ require 'grit'
 
 #up the timeout, as these repos can get quite large
 Grit::Git.git_timeout = 60 # 1 minute should do
+Grit::Git.git_max_size = 100.megabytes # tweak this up for very large changesets
 
 gem "schleyfox-lockfile", ">= 1.0.0"
 require 'lockfile'
