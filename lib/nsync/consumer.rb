@@ -93,6 +93,7 @@ module Nsync
     def apply_changes(a, b)
       config.lock do
         config.log.info("[NSYNC] Moving Nsync::Consumer from '#{a}' to '#{b}'")
+        clear_queues
         diffs = nil
         diffs = repo.diff(a, b)
 
@@ -115,6 +116,8 @@ module Nsync
             apply_changes_for_class(klass, changes)
           end
         end
+        run_after_finished
+        clear_queues
         config.version_manager.version = b
       end
     end
@@ -136,6 +139,20 @@ module Nsync
       rescue
         {}
       end
+    end
+
+    def after_class_finished(klass, l)
+      @after_class_finished_queues[klass] ||= []
+      @after_class_finished_queues[klass] << l
+    end
+
+    def after_current_class_finished(l)
+      after_class_finished(@current_class_for_queue, l)
+    end
+
+    def after_finished(l)
+      @after_finished_queue ||= []
+      @after_finished_queue << l
     end
 
     protected
@@ -164,6 +181,7 @@ module Nsync
     end
 
     def apply_changes_for_class(klass, changes)
+      @current_class_for_queue = klass
       if klass.respond_to?(:nsync_find)
         changes.each do |change|
           objects = klass.nsync_find(change.id)
@@ -188,6 +206,30 @@ module Nsync
         end
       else
         config.log.warn("[NSYNC] Consumer class '#{klass}' has no method nsync_find; skipping")
+      end
+      @current_class_for_queue = nil
+      run_after_class_finished(klass)
+    end
+
+    def clear_queues
+      @after_class_finished_queues = {}
+      @after_finished_queue = []
+    end
+
+    def run_after_class_finished(klass)
+      queue = @after_class_finished_queues[klass]
+      if queue
+        queue.each do |l|
+          l.call
+        end
+      end
+    end
+
+    def run_after_finished
+      if @after_finished_queue
+        @after_finished_queue.each do |l|
+          l.call
+        end
       end
     end
 

@@ -157,7 +157,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
           @consumer.expects(:changeset_from_diffs).with(:diffs).returns(changeset).once
 
           @consumer.expects(:apply_changes_for_class).when(order.is('bar')).with(NsyncTestBar, ["changes"]).then(order.is('foo')).once
-          @consumer.expects(:apply_changes_for_class).when(order.is('foo')).with(NsyncTestFoo, ["changes"]).once
+          @consumer.expects(:apply_changes_for_class).when(order.is('foo')).with(NsyncTestFoo, ["changes"]).then(order.is('final')).once
         end
 
         should "execute in specified order" do
@@ -165,6 +165,47 @@ class NsyncConsumerTest < Test::Unit::TestCase
         end
       end
 
+      context "with callbacks" do
+        setup do
+          Nsync.config.clear_class_mappings
+          Nsync.config.map_class "Foo", "NsyncTestFoo"
+          Nsync.config.map_class "Bar", "NsyncTestBar"
+          Nsync.config.version_manager = NsyncTestVersion
+          NsyncTestVersion.version = @repo.repo.head.commit.id
+
+          Nsync.config.ordering = ["NsyncTestBar", "NsyncTestFoo"]
+          @consumer.send(:clear_queues)
+          @consumer.expects(:clear_queues).twice
+        end
+
+        should "work" do
+          @repo.add_file("foo/1.json", {:id => 1, :val => "Party"})
+          NsyncTestFoo.expects(:nsync_find).with('1').returns([]).once
+          NsyncTestFoo.expects(:nsync_add_data).once.with(@consumer, :added, is_a(String), has_entry("val", "Party")) 
+          @repo.add_file("bar/2.json", {:id => 2, :val => "Hardy"})
+          @repo.commit("Added some objects")
+          NsyncTestFoo.expects(:nsync_find).never
+          mock_bar = mock
+          mock_bar.expects(:nsync_update).once.with(@consumer, :added, is_a(String), has_entry("val", "Hardy"))
+          NsyncTestBar.expects(:nsync_find).with('2').returns([mock_bar]).once
+
+
+          order = states('order').starts_as('bar')
+
+          NsyncTestFoo.expects(:from_callback).once.when(order.is('foo')).then(order.is('final'))
+          mock_bar.expects(:from_callback).once.when(order.is('bar')).then(order.is('foo'))
+
+          mock_final = mock
+          mock_final.expects(:from_callback).once.when(order.is('final'))
+
+          @consumer.after_class_finished(NsyncTestFoo, lambda { NsyncTestFoo.from_callback })
+          @consumer.after_class_finished(NsyncTestBar, lambda { mock_bar.from_callback })
+
+          @consumer.after_finished(lambda { mock_final.from_callback })
+
+          @consumer.update
+        end
+      end
 
       context "basic flow" do
         setup do
