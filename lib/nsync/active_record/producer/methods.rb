@@ -3,9 +3,7 @@ module Nsync
     module Producer
       module InstanceMethods
         def self.included(base)
-          puts "foo"
           base.class_eval do
-            p base
             after_save :nsync_write
             before_destroy :nsync_destroy
           end
