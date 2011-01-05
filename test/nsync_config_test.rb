@@ -73,7 +73,7 @@ class NsyncConfigTest < Test::Unit::TestCase
 
   context "Lock" do
     setup do
-      @lock_file = "/private/tmp/nsync_test_#{Process.pid}.lock"
+      @lock_file = "#{TMP_DIR}/nsync_test_#{Process.pid}.lock"
       FileUtils.rm @lock_file, :force => true
       Nsync.config.lock_file = @lock_file
     end

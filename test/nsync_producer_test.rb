@@ -4,7 +4,7 @@ class NsyncProducerTest < Test::Unit::TestCase
   def setup
     #Grit.debug = true
     Nsync.reset_config
-    @lock_file = "/private/tmp/nsync_test_#{Process.pid}.lock"
+    @lock_file = "#{TMP_DIR}/nsync_test_#{Process.pid}.lock"
     FileUtils.rm @lock_file, :force => true
     Nsync.config.lock_file = @lock_file
   end

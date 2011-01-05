@@ -193,6 +193,12 @@ module Nsync
       @after_finished_queue << l
     end
 
+    # Lists the configured data remotes in the repo
+    def remotes
+      repo.git.remote({:v => true}).split("\n").map do |line|
+        line.split(/\s+/)
+      end
+    end
     protected
     def get_or_create_repo
       if config.local? || File.exists?(config.repo_path)

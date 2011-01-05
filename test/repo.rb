@@ -23,7 +23,7 @@ class TestRepo
   end
 
   def self.repo_path
-    "/private/tmp/nsync_test_repo_#{Process.pid}"
+    "#{TMP_DIR}/nsync_test_repo_#{Process.pid}"
   end
 
   def bare_consumer_repo_path

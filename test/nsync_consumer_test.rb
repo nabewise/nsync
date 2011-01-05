@@ -4,7 +4,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
   def setup
     Nsync.reset_config
     #Grit.debug = true
-    @lock_file = "/private/tmp/nsync_test_#{Process.pid}.lock"
+    @lock_file = "#{TMP_DIR}/nsync_test_#{Process.pid}.lock"
     FileUtils.rm @lock_file, :force => true
     Nsync.config.lock_file = @lock_file
 
@@ -42,7 +42,7 @@ class NsyncConsumerTest < Test::Unit::TestCase
 
       context "that doesn't exist" do
         setup do
-          @repo_path = "/private/tmp/nsync_non_existent_test_repo"
+          @repo_path = "#{TMP_DIR}/nsync_non_existent_test_repo"
           FileUtils.rm_rf @repo_path
   
           Nsync.config.repo_path = @repo_path
@@ -71,8 +71,8 @@ class NsyncConsumerTest < Test::Unit::TestCase
     context "for a remote repo" do
       context "where the origin does not exist" do
         setup do
-          @repo_url = "/private/tmp/nsync_non_existent_test_repo"
-          @repo_path = "/private/tmp/nsync_non_existent_test_repo_consumer.git"
+          @repo_url = "#{TMP_DIR}/nsync_non_existent_test_repo"
+          @repo_path = "#{TMP_DIR}/nsync_non_existent_test_repo_consumer.git"
           FileUtils.rm_rf @repo_url
           FileUtils.rm_rf @repo_path
 
@@ -87,23 +87,34 @@ class NsyncConsumerTest < Test::Unit::TestCase
         end
       end
 
-      context "where the origin does exist" do
-        setup do
-          @repo = TestRepo.new
-          FileUtils.rm_rf @repo.bare_consumer_repo_path
+      [['local disk', nil], 
+        ['github', 'git://github.com/schleyfox/test_repo.git']].each do |name, url|
 
-          Nsync.config.repo_url = @repo.repo_path
-          Nsync.config.repo_path = @repo.bare_consumer_repo_path
-
-          @consumer = Nsync::Consumer.new
+        context "where the origin does exist on #{name}" do
+          setup do
+            @repo = TestRepo.new
+            FileUtils.rm_rf @repo.bare_consumer_repo_path
+  
+            Nsync.config.repo_url = url || @repo.repo_path
+            Nsync.config.repo_path = @repo.bare_consumer_repo_path
+  
+            @consumer = Nsync::Consumer.new
+          end
+  
+          should "assign repo to a new bare repo" do
+            assert @consumer.repo.is_a? Grit::Repo
+            assert @consumer.repo.bare
+          end
+  
+          should "set the origin remote" do
+            p @consumer.remotes
+            origin = @consumer.remotes.detect{|r| r[0] == "origin" && r[2] == "(fetch)" }
+            assert origin
+            assert_equal Nsync.config.repo_url, origin[1]
+          end
         end
-
-        should "assign repo to a new bare repo" do
-          assert @consumer.repo.is_a? Grit::Repo
-          assert @consumer.repo.bare
-        end
-      end
-    end  
+      end  
+    end
   end
 
   context "Updating the Consumer side" do
