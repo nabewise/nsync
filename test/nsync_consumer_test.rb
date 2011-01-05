@@ -107,7 +107,6 @@ class NsyncConsumerTest < Test::Unit::TestCase
           end
   
           should "set the origin remote" do
-            p @consumer.remotes
             origin = @consumer.remotes.detect{|r| r[0] == "origin" && r[2] == "(fetch)" }
             assert origin
             assert_equal Nsync.config.repo_url, origin[1]
