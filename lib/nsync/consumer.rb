@@ -101,14 +101,17 @@ module Nsync
 
         if config.ordering
           config.ordering.each do |klass|
-            begin
-              klass = klass.constantize
+            klass = begin
+                klass.constantize
+              rescue NameError => e
+                config.log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
+                false
+              end
+            if klass
               changes = changeset[klass]
               if changes
                 apply_changes_for_class(klass, changes)
               end
-            rescue NameError
-              config.log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
             end
           end
         else
@@ -164,6 +167,7 @@ module Nsync
     # @param [Class] klass
     # @param [Proc] l
     def after_class_finished(klass, l)
+      config.log.info("[NSYNC] Added callback to run after class '#{klass}'")
       @after_class_finished_queues[klass] ||= []
       @after_class_finished_queues[klass] << l
     end
@@ -184,6 +188,7 @@ module Nsync
     #
     # @param [Proc] l
     def after_finished(l)
+      config.log.info("[NSYNC] Added callback to run at the end of the update")
       @after_finished_queue ||= []
       @after_finished_queue << l
     end
@@ -245,11 +250,13 @@ module Nsync
     end
 
     def clear_queues
+      config.log.info("[NSYNC] Callback queues cleared")
       @after_class_finished_queues = {}
       @after_finished_queue = []
     end
 
     def run_after_class_finished(klass)
+      config.log.info("[NSYNC] Running callbacks for after class '#{klass}'")
       queue = @after_class_finished_queues[klass]
       if queue
         queue.each do |l|
@@ -259,6 +266,7 @@ module Nsync
     end
 
     def run_after_finished
+      config.log.info("[NSYNC] Running callbacks for the end of the update")
       if @after_finished_queue
         @after_finished_queue.each do |l|
           l.call

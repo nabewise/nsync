@@ -147,21 +147,55 @@ class NsyncConsumerTest < Test::Unit::TestCase
       end
 
       context "with ordering" do
-        setup do
-          changeset = {NsyncTestFoo => ["changes"], NsyncTestBar => ["changes"]}
-
-          order = states('order').starts_as('bar')
-
-          Nsync.config.ordering = ["NsyncTestBar", "NsyncTestFoo"]
-          @consumer.repo.expects(:diff).returns(:diffs).once
-          @consumer.expects(:changeset_from_diffs).with(:diffs).returns(changeset).once
-
-          @consumer.expects(:apply_changes_for_class).when(order.is('bar')).with(NsyncTestBar, ["changes"]).then(order.is('foo')).once
-          @consumer.expects(:apply_changes_for_class).when(order.is('foo')).with(NsyncTestFoo, ["changes"]).then(order.is('final')).once
+        context "the changes" do
+          setup do
+            changeset = {NsyncTestFoo => ["changes"], NsyncTestBar => ["changes"]}
+  
+            order = states('order').starts_as('bar')
+  
+            Nsync.config.ordering = ["NsyncTestBar", "NsyncTestFoo"]
+            @consumer.repo.expects(:diff).returns(:diffs).once
+            @consumer.expects(:changeset_from_diffs).with(:diffs).returns(changeset).once
+  
+            @consumer.expects(:apply_changes_for_class).when(order.is('bar')).with(NsyncTestBar, ["changes"]).then(order.is('foo')).once
+            @consumer.expects(:apply_changes_for_class).when(order.is('foo')).with(NsyncTestFoo, ["changes"]).then(order.is('final')).once
+          end
+  
+          should "execute in specified order" do
+            @consumer.update
+          end
         end
 
-        should "execute in specified order" do
-          @consumer.update
+        context "when the class in ordering is not found" do
+          setup do
+            Nsync.config.ordering = ["NsyncTestBlahBlah"]
+            @consumer.repo.expects(:diff).returns(:diffs).once
+            @consumer.expects(:changeset_from_diffs).with(:diffs).returns({}).once
+            @consumer.expects(:apply_changes_for_class).never
+          end
+
+          should "not error out" do
+            assert_nothing_raised do
+              @consumer.update
+            end
+          end
+        end
+
+        context "when a NameError occurs for something other than the class" do
+          setup do
+            changeset = {NsyncTestFoo => ["changes"], NsyncTestBar => ["changes"]}
+            Nsync.config.ordering = ["NsyncTestBar", "NsyncTestFoo"]
+            @consumer.repo.expects(:diff).returns(:diffs).once
+            @consumer.expects(:changeset_from_diffs).with(:diffs).returns(changeset).once
+            @consumer.expects(:apply_changes_for_class).
+              raises(NoMethodError, "undefined method `foo' for nil:NilClass")
+          end
+
+          should "raise the error" do
+            assert_raise NoMethodError do
+              @consumer.update
+            end
+          end
         end
       end
 
