@@ -125,6 +125,19 @@ module Nsync
       end
     end
 
+    # Reprocesses all changes from the start of the repo to the current version
+    # for the class klass, queues will not be cleared, so you can use this to
+    # do powerful data reconstruction.  You can also shoot your foot off. Be
+    # very careful
+    def reprocess_class!(klass)
+      diffs = repo.diff(first_commit, config.version_manager.version)
+      changeset = changeset_from_diffs(diffs)
+
+      changes = changeset[klass]
+      if changes
+        apply_changes_for_class(klass, changes)
+      end
+    end
 
     # @private
     class Change < Struct.new(:id, :diff) 
@@ -199,6 +212,12 @@ module Nsync
         line.split(/\s+/)
       end
     end
+
+    # Gets the first commit id in the repo
+    def first_commit
+      self.repo.git.rev_list({:reverse => true}, "master").split("\n").first
+    end
+
     protected
     def get_or_create_repo
       if config.local? || File.exists?(config.repo_path)
@@ -209,7 +228,7 @@ module Nsync
         git = Grit::Git.new(config.repo_path)
         git.clone({:bare => true}, config.repo_url, config.repo_path)
         self.repo = Grit::Repo.new(config.repo_path)
-        config.version_manager.version = git.rev_list({:reverse => true}, "master").split("\n").first
+        config.version_manager.version = first_commit
         return self.repo
       end
     end

@@ -87,32 +87,28 @@ class NsyncConsumerTest < Test::Unit::TestCase
         end
       end
 
-      [['local disk', nil], 
-        ['github', 'git://github.com/schleyfox/test_repo.git']].each do |name, url|
+      context "where the origin does exist" do
+        setup do
+          @repo = TestRepo.new
+          FileUtils.rm_rf @repo.bare_consumer_repo_path
 
-        context "where the origin does exist on #{name}" do
-          setup do
-            @repo = TestRepo.new
-            FileUtils.rm_rf @repo.bare_consumer_repo_path
-  
-            Nsync.config.repo_url = url || @repo.repo_path
-            Nsync.config.repo_path = @repo.bare_consumer_repo_path
-  
-            @consumer = Nsync::Consumer.new
-          end
-  
-          should "assign repo to a new bare repo" do
-            assert @consumer.repo.is_a? Grit::Repo
-            assert @consumer.repo.bare
-          end
-  
-          should "set the origin remote" do
-            origin = @consumer.remotes.detect{|r| r[0] == "origin" && r[2] == "(fetch)" }
-            assert origin
-            assert_equal Nsync.config.repo_url, origin[1]
-          end
+          Nsync.config.repo_url = @repo.repo_path
+          Nsync.config.repo_path = @repo.bare_consumer_repo_path
+
+          @consumer = Nsync::Consumer.new
         end
-      end  
+
+        should "assign repo to a new bare repo" do
+          assert @consumer.repo.is_a? Grit::Repo
+          assert @consumer.repo.bare
+        end
+
+        should "set the origin remote" do
+          origin = @consumer.remotes.detect{|r| r[0] == "origin" && r[2] == "(fetch)" }
+          assert origin
+          assert_equal Nsync.config.repo_url, origin[1]
+        end
+      end
     end
   end
 
@@ -299,6 +295,34 @@ class NsyncConsumerTest < Test::Unit::TestCase
           @consumer.rollback
         end
       end
+    end
+  end
+
+  context "Reprocessing all data for a class" do
+    setup do
+      @repo = TestRepo.new
+      Nsync.config.version_manager.stubs(:version => "current version")
+      FileUtils.rm_rf @repo.bare_consumer_repo_path
+
+      Nsync.config.repo_url = @repo.repo_path
+      Nsync.config.repo_path = @repo.bare_consumer_repo_path
+
+      @consumer = Nsync::Consumer.new
+    end
+
+    should "get changes from initial revision to current version and apply only for the class" do
+      changeset = {NsyncTestFoo => ["changes"], NsyncTestBar => ["changes"]}
+  
+      @consumer.expects(:first_commit).returns("first version").once
+  
+      @consumer.repo.expects(:diff).with("first version", "current version").returns(:diffs).once
+      @consumer.expects(:changeset_from_diffs).with(:diffs).returns(changeset).once
+
+      @consumer.expects(:apply_changes_for_class).with(NsyncTestBar, is_a(Array)).never
+      @consumer.expects(:apply_changes_for_class).with(NsyncTestFoo, ["changes"]).once
+
+
+      @consumer.reprocess_class!(NsyncTestFoo)
     end
   end
 end
