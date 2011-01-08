@@ -151,7 +151,6 @@ module Nsync
       end
     end
 
-    # @private
     class Change < Struct.new(:id, :diff) 
       def type
         if diff.deleted_file
@@ -161,6 +160,18 @@ module Nsync
         else
           :modified
         end
+      end
+
+      def a_data
+        JSON.load(diff.a_blob.data)
+      rescue
+        {}
+      end
+
+      def b_data
+        JSON.load(diff.b_blob.data)
+      rescue
+        {}
       end
 
       def data
