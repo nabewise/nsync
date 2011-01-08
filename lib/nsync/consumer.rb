@@ -80,6 +80,17 @@ module Nsync
       Nsync.config
     end
 
+    def latest_changes
+      update_repo &&
+      changes(config.version_manager.version,
+              repo.head.commit.id)
+    end
+
+    def changes(a, b)
+      diffs = repo.diff(a,b)
+      changeset_from_diffs(diffs)
+    end
+
     # Translates and applies the changes between commit id 'a' and commit id 'b' to
     # the datastore.  This is used internally by rollback and update. Don't use this
     # unless you absolutely know what you are doing.
@@ -91,6 +102,7 @@ module Nsync
     # @param [String] a current data version commit id
     # @param [String] b new data version commit id
     def apply_changes(a, b)
+      return false if a == b
       config.lock do
         config.log.info("[NSYNC] Moving Nsync::Consumer from '#{a}' to '#{b}'")
         clear_queues

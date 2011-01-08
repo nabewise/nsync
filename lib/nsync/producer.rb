@@ -58,6 +58,19 @@ module Nsync
       config.log.info("[NSYNC] Removed file '#{filename}'")
     end
 
+    def latest_changes
+      diff = repo.git.native('diff', {:full_index => true, :cached => true})
+
+      if diff =~ /diff --git a/
+        diff = diff.sub(/.*?(diff --git a)/m, '\1')
+      else
+        diff = ''
+      end
+
+      diffs = Grit::Diff.list_from_string(repo, diff)
+      changeset_from_diffs(diffs)
+    end
+
     # Commits and pushes the current changeset
     def commit(message="Friendly data update")
       config.lock do
