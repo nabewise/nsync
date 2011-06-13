@@ -5,6 +5,7 @@ gem "schleyfox-grit", ">= 2.3.0.1"
 require 'grit'
 
 require 'jeweler'
+$:.unshift(".")
 require 'jeweler_monkey_patch'
       
     

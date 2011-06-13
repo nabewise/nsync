@@ -11,8 +11,15 @@ module Nsync
       names.shift if names.size == 0 || names.first.size == 0
 
       constant = Object
-      names.each do |name|
-        constant = constant.const_defined?(name) ? constant.const_get(name) : constant.const_missing(name)
+      #Ruby 1.9 awesomeness
+      if Module.method(:const_get).arity == 1
+        names.each do |name|
+          constant = constant.const_defined?(name) ? constant.const_get(name) : constant.const_missing(name)
+        end
+      else
+        names.each do |name|
+          constant = constant.const_get(name, false) || constant.const_missing(name)
+        end
       end
       constant
     end

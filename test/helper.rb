@@ -4,8 +4,7 @@ require 'rubygems'
 require 'test/unit'
 require 'mocha'
 require 'shoulda'
-require 'redgreen'
-
+require 'redgreen' unless '1.9'.respond_to?(:force_encoding)
 
 #hack for Mac OS X
 if File.directory?("/private/tmp")

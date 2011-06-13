@@ -249,7 +249,7 @@ module Nsync
 
       config.lock do
         git = Grit::Git.new(config.repo_path)
-        git.clone({:bare => true}, config.repo_url, config.repo_path)
+        git.run('', 'clone', '', {:bare => true}, [config.repo_url, config.repo_path])
         self.repo = Grit::Repo.new(config.repo_path)
         config.version_manager.version = first_commit
         return self.repo
