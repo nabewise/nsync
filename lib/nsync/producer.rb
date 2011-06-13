@@ -128,13 +128,13 @@ module Nsync
     end
 
     def consumer_classes_and_id_from_path(path)
-      producer_class_name = File.dirname(path).camelize
+      producer_class_name = CoreExtensions.camelize(File.dirname(path))
       id = File.basename(path, ".json")
       classes = config.consumer_classes_for(producer_class_name)
       
       # refinement to allow the producer to consume itself
       if classes.empty?
-        classes = [producer_class_name.constantize].compact
+        classes = [CoreExtensions.constantize(producer_class_name)].compact
       end
       [classes, id]
     end

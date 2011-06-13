@@ -1,16 +1,15 @@
 require 'rubygems'
 require 'fileutils'
 
-# just for now
-gem 'activesupport', "~> 2.3.5"
-require 'active_support'
-
 gem "schleyfox-grit", ">= 2.3.0.1"
 require 'grit'
 
+require 'nsync/core_extensions'
+
 #up the timeout, as these repos can get quite large
 Grit::Git.git_timeout = 60 # 1 minute should do
-Grit::Git.git_max_size = 100.megabytes # tweak this up for very large changesets
+# 100 megabytes
+Grit::Git.git_max_size = 100*1024*1024 # tweak this up for very large changesets
 
 gem "schleyfox-lockfile", ">= 1.0.0"
 require 'lockfile'

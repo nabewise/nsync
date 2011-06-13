@@ -19,7 +19,6 @@ Jeweler::Tasks.new do |gem|
   gem.authors = ["Ben Hughes"]
 
   gem.add_dependency "json"
-  gem.add_dependency "activesupport", "~> 2.3.5"
   gem.add_dependency "schleyfox-grit", ">= 2.3.0.1"
   gem.add_dependency "schleyfox-lockfile", ">= 1.0.0"
 

@@ -114,7 +114,7 @@ module Nsync
         if config.ordering
           config.ordering.each do |klass|
             klass = begin
-                klass.constantize
+                CoreExtensions.constantize(klass)
               rescue NameError => e
                 config.log.warn("[NSYNC] Could not find class '#{klass}' from ordering; skipping")
                 false
@@ -336,7 +336,7 @@ module Nsync
     end
 
     def consumer_classes_and_id_from_path(path)
-      producer_class_name = File.dirname(path).camelize
+      producer_class_name = CoreExtensions.camelize(File.dirname(path))
       id = File.basename(path, ".json")
       [config.consumer_classes_for(producer_class_name), id]
     end

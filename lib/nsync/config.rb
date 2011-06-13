@@ -59,7 +59,7 @@ module Nsync
     def consumer_classes_for(producer_class)
       Array(@class_mappings[producer_class]).map do |klass|
         begin
-          klass.constantize
+          CoreExtensions.constantize(klass)
         rescue NameError => e
           log.error(e.inspect)
           log.warn("[NSYNC] Could not find class '#{klass}'; skipping")

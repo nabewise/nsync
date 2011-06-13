@@ -6,6 +6,7 @@ require 'mocha'
 require 'shoulda'
 require 'redgreen'
 
+
 #hack for Mac OS X
 if File.directory?("/private/tmp")
   TMP_DIR = "/private/tmp"
