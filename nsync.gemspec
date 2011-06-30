@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{nsync}
-  s.version = "0.1.1"
+  s.version = "0.2.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Ben Hughes"]
-  s.date = %q{2011-01-08}
+  s.date = %q{2011-06-13}
   s.description = %q{Nsync is designed to allow you to have a separate data
   processing app with its own data processing optimized database and a consumer
   app with its own database, while keeping the data as in sync as you want it.}
@@ -31,6 +31,7 @@ Gem::Specification.new do |s|
      "lib/nsync/class_methods.rb",
      "lib/nsync/config.rb",
      "lib/nsync/consumer.rb",
+     "lib/nsync/core_extensions.rb",
      "lib/nsync/git_version_manager.rb",
      "lib/nsync/producer.rb",
      "lib/nsync/producer/methods.rb",
@@ -38,7 +39,7 @@ Gem::Specification.new do |s|
   ]
   s.homepage = %q{http://github.com/schleyfox/nsync}
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.6}
+  s.rubygems_version = %q{1.4.0}
   s.summary = %q{Keep your data processors and apps in sync}
   s.test_files = [
     "test/active_record_test.rb",
@@ -51,19 +52,16 @@ Gem::Specification.new do |s|
   ]
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
-    if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0') then
+    if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<json>, [">= 0"])
-      s.add_runtime_dependency(%q<activesupport>, ["~> 2.3.5"])
       s.add_runtime_dependency(%q<schleyfox-grit>, [">= 2.3.0.1"])
       s.add_runtime_dependency(%q<schleyfox-lockfile>, [">= 1.0.0"])
       s.add_development_dependency(%q<shoulda>, [">= 0"])
       s.add_development_dependency(%q<mocha>, [">= 0"])
     else
       s.add_dependency(%q<json>, [">= 0"])
-      s.add_dependency(%q<activesupport>, ["~> 2.3.5"])
       s.add_dependency(%q<schleyfox-grit>, [">= 2.3.0.1"])
       s.add_dependency(%q<schleyfox-lockfile>, [">= 1.0.0"])
       s.add_dependency(%q<shoulda>, [">= 0"])
@@ -71,7 +69,6 @@ Gem::Specification.new do |s|
     end
   else
     s.add_dependency(%q<json>, [">= 0"])
-    s.add_dependency(%q<activesupport>, ["~> 2.3.5"])
     s.add_dependency(%q<schleyfox-grit>, [">= 2.3.0.1"])
     s.add_dependency(%q<schleyfox-lockfile>, [">= 1.0.0"])
     s.add_dependency(%q<shoulda>, [">= 0"])

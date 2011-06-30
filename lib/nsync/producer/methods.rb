@@ -2,7 +2,7 @@ module Nsync
   class Producer
     module InstanceMethods
       def nsync_write
-        nsync_opts = self.class.read_inheritable_attribute(:nsync_opts)
+        nsync_opts = self.class.nsync_opts
         if !nsync_opts[:if] || nsync_opts[:if].call(self)
           Nsync.config.producer_instance.write_file(nsync_filename, to_nsync_hash)
         elsif Nsync.config.producer_instance.file_exists?(nsync_filename)
@@ -15,8 +15,8 @@ module Nsync
       end
 
       def nsync_filename
-        nsync_opts = self.class.read_inheritable_attribute(:nsync_opts)
-        File.join(self.class.to_s.underscore, "#{send(nsync_opts[:id_key])}.json")
+        nsync_opts = self.class.nsync_opts
+        File.join(CoreExtensions.underscore(self.class.to_s), "#{send(nsync_opts[:id_key])}.json")
       end
     end
   end

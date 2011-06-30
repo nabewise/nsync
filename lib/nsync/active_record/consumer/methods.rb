@@ -3,13 +3,11 @@ module Nsync
     module Consumer
       module ClassMethods
         def nsync_find(ids)
-          nsync_opts = read_inheritable_attribute(:nsync_opts)
           all(:conditions => {nsync_opts[:id_key] => ids})
         end
 
         def nsync_add_data(consumer, event_type, filename, data)
           data = data.dup
-          nsync_opts = read_inheritable_attribute(:nsync_opts)
           if nsync_opts[:id_key].to_s != "id"
             data[nsync_opts[:id_key].to_s] = data.delete("id")
             create(data)
@@ -31,7 +29,7 @@ module Nsync
           if event_type == :deleted
             destroy
           else
-            nsync_opts = self.class.read_inheritable_attribute(:nsync_opts)
+            nsync_opts = self.class.nsync_opts
             if nsync_opts[:id_key].to_s != "id"
               data[nsync_opts[:id_key].to_s] = data.delete("id")
             else
