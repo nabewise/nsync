@@ -36,7 +36,9 @@ module Nsync
     #
     # @param [String] filename path in the working tree to write to
     # @param [Hash] hash a hash that can be converted to json to be written
-    def write_file(filename, hash)
+    # @param [Boolean] add tells whether to git add the file.  
+    #   This is for internal bookkeeping files only
+    def write_file(filename, hash, add=false)
       config.cd do
         dir = File.dirname(filename)
         unless [".", "/"].include?(dir) || File.directory?(dir)
@@ -46,7 +48,7 @@ module Nsync
         File.open(File.join(config.repo_path, filename), "w") do |f|
           f.write( (hash.is_a?(Hash))? hash.to_json : hash )
         end
-        repo.add(File.join(config.repo_path, filename))
+        repo.add(File.join(config.repo_path, filename)) if add
         config.log.info("[NSYNC] Updated file '#{filename}'")
       end
       true
@@ -59,7 +61,8 @@ module Nsync
     end
 
     def latest_changes
-      diff = repo.git.native('diff', {:full_index => true, :cached => true})
+      diff = repo.git.native('diff', {:full_index => true})
+      diff += diff_untracked_files
 
       if diff =~ /diff --git a/
         diff = diff.sub(/.*?(diff --git a)/m, '\1')
@@ -71,11 +74,42 @@ module Nsync
       changeset_from_diffs(diffs)
     end
 
+    # gets untracked files into the diff output
+    # hack from http://stackoverflow.com/questions/855767/can-i-use-git-diff-on-untracked-files
+    def diff_untracked_files
+      response, err = repo.git.sh(<<-CMD)
+        git --git-dir='#{repo.git.git_dir}' ls-files -d --others --exclude-standard  |
+          while read -r i; do git --git-dir='#{repo.git.git_dir}' diff  -- /dev/null "$i"; done
+      CMD
+      response
+    end
+
+
     # Commits and pushes the current changeset
-    def commit(message="Friendly data update")
+    #
+    # By default all changes in working dir are committed.
+    #
+    # Alternatively, specific changes can be specified in the 
+    # which_changes parameter.  The format for this is {"klass" => [id,...]}
+    def commit(message="Friendly data update", which_changes=:all)
       config.lock do
         config.cd do
-          repo.commit_all(message)
+          
+          files_to_commit = []
+          latest_changes.each do |klass, changes|
+            which_of_class = which_changes[klass.to_s] if which_changes.is_a?(Hash)
+            changes.each do |change|
+              if which_changes == :all || 
+                (which_of_class && which_of_class.include?(change.id))
+
+                files_to_commit << 
+                  File.join(config.repo_path, diff_path(change.diff))
+              end
+            end
+          end
+          repo.git.update_index({:add => true, :remove => true}, '--', *files_to_commit)
+
+          repo.commit_index(message)
           config.log.info("[NSYNC] Committed '#{message}' to repo")
         end
       end
@@ -122,7 +156,7 @@ module Nsync
 
       config.lock do
         self.repo = Grit::Repo.init(config.repo_path)
-        write_file(".gitignore", "")
+        write_file(".gitignore", "", true)
       end
       commit("Initial Commit")
     end
@@ -134,7 +168,7 @@ module Nsync
       
       # refinement to allow the producer to consume itself
       if classes.empty?
-        classes = [CoreExtensions.constantize(producer_class_name)].compact
+        classes = [(CoreExtensions.constantize(producer_class_name) rescue nil)].compact
       end
       [classes, id]
     end

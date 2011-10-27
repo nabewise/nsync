@@ -32,7 +32,7 @@ class NsyncProducerTest < Test::Unit::TestCase
 
       should "initialize it and make a base commit" do
         Grit::Repo.expects(:init).with(@repo_path).once
-        Nsync::Producer.any_instance.expects(:write_file).with(".gitignore", "").once
+        Nsync::Producer.any_instance.expects(:write_file).with(".gitignore", "", true).once
         Nsync::Producer.any_instance.expects(:commit).returns(true).once
         Nsync::Producer.new
       end
@@ -74,9 +74,8 @@ class NsyncProducerTest < Test::Unit::TestCase
       end
 
       should "write the file to disk, add it to the index, but not commit" do
-        @producer.repo.expects(:add).with(File.join(@repo.repo_path, @file)).once
         @producer.expects(:commit).never
-        @producer.repo.expects(:commit_all).never
+        @producer.repo.expects(:commit_index).never
         @producer.write_file(@file, @hash)
 
         assert_equal JSON.load(File.read(File.join(@repo.repo_path, @file))),  @hash
@@ -92,7 +91,6 @@ class NsyncProducerTest < Test::Unit::TestCase
 
       should "behave just like a create" do
         new_hash = {"id" => 1, "val" => "Kaboom"}
-        @producer.repo.expects(:add).with(File.join(@repo.repo_path, @file)).once
         @producer.expects(:commit).never
         @producer.write_file(@file, new_hash)
 
@@ -121,7 +119,8 @@ class NsyncProducerTest < Test::Unit::TestCase
 
     should "commit all changes as well as push" do
       @msg = "Test Update"
-      @producer.repo.expects(:commit_all).with(@msg).once
+      @producer.repo.git.expects(:update_index).once
+      @producer.repo.expects(:commit_index).with(@msg).once
       @producer.expects(:push).once
       @producer.commit(@msg)
     end
@@ -256,6 +255,11 @@ class NsyncProducerTest < Test::Unit::TestCase
 
       assert_equal 4, @repo.commits.size
       assert_equal 4, @remote_repo.commits.size
+
+      @producer.write_file("nsync_test_bar/5.json", {:id => 5, :val => "Changed"})
+      @producer.write_file("nsync_test_bar/6.json", {:id => 6, :val => "Added file"})
+      @repo.git.expects(:update_index).with({:add => true, :remove => true}, '--', File.join(@repo_path, 'nsync_test_bar/6.json')).once
+      @producer.commit("Partial commit", {'NsyncTestBar' => ['6']})
     end
   end
 end
