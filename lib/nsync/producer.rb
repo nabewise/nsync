@@ -61,7 +61,8 @@ module Nsync
     end
 
     def latest_changes
-      diff = repo.git.native('diff', {:full_index => true})
+      # TODO: change to using --work-tree in git
+      diff = config.cd { repo.git.native('diff', {:full_index => true}) }
       diff += diff_untracked_files
 
       if diff =~ /diff --git a/
@@ -77,11 +78,14 @@ module Nsync
     # gets untracked files into the diff output
     # hack from http://stackoverflow.com/questions/855767/can-i-use-git-diff-on-untracked-files
     def diff_untracked_files
-      response, err = repo.git.sh(<<-CMD)
-        git --git-dir='#{repo.git.git_dir}' ls-files -d --others --exclude-standard  |
-          while read -r i; do git --git-dir='#{repo.git.git_dir}' diff  -- /dev/null "$i"; done
-      CMD
-      response
+      # TODO: change to using --work-tree in git
+      config.cd do
+        response, err = repo.git.sh(<<-CMD)
+          git --git-dir='#{repo.git.git_dir}' ls-files -d --others --exclude-standard  |
+            while read -r i; do git --git-dir='#{repo.git.git_dir}' diff  -- /dev/null "$i"; done
+        CMD
+        response
+      end
     end
 
 
