@@ -152,6 +152,12 @@ module Nsync
     end
 
     class Change < Struct.new(:id, :diff) 
+      def json_data(data)
+        JSON.load(data)
+      rescue
+        {}
+      end
+
       def type
         if diff.deleted_file
           :deleted
@@ -162,22 +168,18 @@ module Nsync
         end
       end
 
-      def a_data
-        JSON.load(diff.a_blob.data)
-      rescue
-        {}
+      def a_data(parse_json=true)
+        val = diff.a_blob ? diff.a_blob.data : ""
+        parse_json ? json_data(val) : val
       end
 
-      def b_data
-        JSON.load(diff.b_blob.data)
-      rescue
-        {}
+      def b_data(parse_json=true)
+        val = diff.b_blob ? diff.b_blob.data : ""
+        parse_json ? json_data(val) : val
       end
 
       def data
-        @data ||= JSON.load(diff.b_blob.data)
-      rescue
-        {}
+        @data ||= b_data
       end
     end
 
@@ -322,14 +324,14 @@ module Nsync
       end
     end
 
-    def changeset_from_diffs(diffs)
+    def changeset_from_diffs(diffs, change_klass=Change)
       diffs.inject({}) do |h, diff|
         next h if diff_path(diff) =~ /\.gitignore$/
 
         classes, id = consumer_classes_and_id_from_path(diff_path(diff))
         classes.each do |klass|
           h[klass] ||= []
-          h[klass] << Change.new(id, diff)
+          h[klass] << change_klass.new(id, diff)
         end
         h
       end

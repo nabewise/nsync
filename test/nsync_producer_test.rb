@@ -198,6 +198,40 @@ class NsyncProducerTest < Test::Unit::TestCase
     end
   end
 
+  context "latest_changes" do
+    setup do
+      @repo = TestRepo.new
+
+      Nsync.config.repo_path = @repo.repo_path
+      @producer = Nsync::Producer.new
+    end
+
+    should "work the same for added/modified/deleted" do
+      filename = "nsync_test_foo/1.json"
+      full_path = File.join(@repo.repo_path, filename)
+      @repo.add_file(filename, 
+                     {:id => 1, :data => "new file"}, false)
+      changes = @producer.latest_changes
+      assert_equal 1, changes[NsyncTestFoo].size
+      assert_equal JSON.load(File.read(full_path)), changes[NsyncTestFoo][0].b_data
+      @producer.commit("added new file")
+      
+      @repo.add_file(filename, 
+                     {:id => 1, :data => "modified file"}, false)
+      changes = @producer.latest_changes
+      assert_equal 1, changes[NsyncTestFoo].size
+      assert_equal JSON.load(File.read(full_path)), changes[NsyncTestFoo][0].b_data
+      old_value = JSON.load(File.read(full_path))
+      @producer.commit("modified file")
+
+      @repo.remove_file(filename)
+      changes = @producer.latest_changes
+      assert_equal 1, changes[NsyncTestFoo].size
+      assert_equal old_value, changes[NsyncTestFoo][0].a_data
+      assert changes[NsyncTestFoo][0].diff.deleted_file
+    end
+  end
+
   context "basic flow" do
     setup do
       @repo_path = TestRepo.repo_path

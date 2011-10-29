@@ -38,7 +38,7 @@ class TestRepo
     "#{repo_path}_producer_push.git"
   end
 
-  def add_file(filename, content)
+  def add_file(filename, content, add=true)
     cd do
       dir = File.dirname(filename)
       if ![".", "/"].include?(dir) && !File.exists?(dir)
@@ -47,7 +47,7 @@ class TestRepo
       File.open(File.join(repo_path, filename), "w") do |f|
         f.write((content.is_a?(Hash))? content.to_json : content)
       end
-      repo.add(File.join(repo_path, filename))
+      repo.add(File.join(repo_path, filename)) if add
     end
   end
 

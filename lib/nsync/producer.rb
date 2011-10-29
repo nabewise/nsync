@@ -60,6 +60,17 @@ module Nsync
       config.log.info("[NSYNC] Removed file '#{filename}'")
     end
 
+    class Change < ::Nsync::Consumer::Change
+      def b_data(parse_json=true)
+        if type == :deleted
+          super
+        else
+          val = File.read(File.join(Nsync.config.repo_path, diff.b_path))
+          parse_json ? json_data(val) : val
+        end
+      end
+    end
+        
     def latest_changes
       # TODO: change to using --work-tree in git
       diff = config.cd { repo.git.native('diff', {:full_index => true}) }
@@ -72,7 +83,7 @@ module Nsync
       end
 
       diffs = Grit::Diff.list_from_string(repo, diff)
-      changeset_from_diffs(diffs)
+      changeset_from_diffs(diffs, Change)
     end
 
     # gets untracked files into the diff output
