@@ -82,7 +82,7 @@ module Nsync
       config.cd do
         response, err = repo.git.sh(<<-CMD)
           git --git-dir='#{repo.git.git_dir}' ls-files -d --others --exclude-standard  |
-            while read -r i; do git --git-dir='#{repo.git.git_dir}' diff  -- /dev/null "$i"; done
+            while read -r i; do git --git-dir='#{repo.git.git_dir}' diff --full-index -- /dev/null "$i"; done
         CMD
         response
       end
