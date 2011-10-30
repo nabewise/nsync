@@ -197,6 +197,12 @@ You can update from the repo like so:
     consumer = Nsync::Consumer.new
     consumer.update
 
+TODO
+====
+
+1. Create proper benchmarks for large projects
+2. Optimize working dir usage (perhaps klass/hash(id)[0...2]/id)
+3. Look into using libgit2 or something
 
 
 
